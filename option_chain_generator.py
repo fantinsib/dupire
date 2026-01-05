@@ -1,28 +1,50 @@
-# Generation of option chain data 
+################################ Generation of option chain data 
+'''
+This function aims to generate synthetic option data based on the SVI model :
+   
+       w(k) = a + b * (rho*(k-m) + sqrt{(k-m)^2 + sigma**2)}
+   
+    with : 
+        w(k) : the total variance 
+        a : baseline level of total variance
+        b: slope of the curve (b>0)
+        rho: the skew 
+        m: horizontal shift
+        sigma: curvature, with sigma > 0
 
+The objective is to model, for various maturities, the following properties :
+- lower total variance for options with high log-moneyness vs negative log-moneyness
+- as maturity increases, total variance should increase 
+
+To do this, this function generates for each maturity T time-dependant 
+parameters for an SVI curve plus some slight noise. We start by setting a
+target ATM total variance, we then make realistic values for b, rho, m, sigma 
+Finally we solve for a 
+ '''
 
 import numpy as np
 import random
 import pandas as pd
 
 
-def make_synth_iv_chain(
-    S0=100.0,
-    r=0.02,
-    q=0.00,
-    maturities_days=(7, 14, 30, 60, 90, 180, 360),
+def make_synth_iv_chain_svi(
+    S0=100.0, r=0.02,q=0.00,
+    maturities_days=(30, 60, 90, 180, 360),
     k_min=-0.30, k_max=0.30, n_k=31,
-    sigma0=0.20, a=0.02, s=-0.35, c=0.40, eps=1e-3,
-    noise_atm=0.003, noise_wings=0.010,
-    seed=0):
+    seed=0)-> pd.DataFrame:
     """
-    Generates synthetic option data
+    Generate syntethic option chain data
 
     Args:
-        S0: spot price
-        r: rf rate
-        q: dividend yield
-
+        S0: Spot price 
+        r: risk-free rate
+        q: dividiend yield
+        maturities_days: tuple of maturities (in days)
+        k_min: min log-moneyness
+        k_max: max log-moneyness
+        n_k: number of option per maturity
+    Returns:
+        pd.DataFrame of the data
     """
     rng = np.random.default_rng(seed)
 
@@ -30,136 +52,41 @@ def make_synth_iv_chain(
     rows = []
 
     for days in maturities_days:
-        t = days / 365.0
-        F = S0 * np.exp((r - q) * t)
+        T = days / 365.0
+        F = S0 * np.exp((r - q) * T)
 
-        for k in k_grid:
-            K = F * np.exp(k)
+        #We set the ATM forward level (k=0):
+        #22% for long-term level, +6% for short term, 0.25 for decrease over time
+        iv_atm = 0.22 + 0.06 * np.exp(-T / 0.25)  
+        w_atm = iv_atm**2 * T ## target ATM forward total variance 
 
-            iv = (
-                sigma0
-                + a * np.sqrt(t)
-                + s * (k / np.sqrt(t + eps))
-                + c * (k**2)
-            )
-            iv = float(np.clip(iv, 0.03, 2.00))
+        
+        bT   = 0.04 + 0.02 * np.exp(-T / 0.3) #smile amplitude
+        rhoT = -0.55 + 0.20 * (T / (T + 0.5)) ## skew
+        rhoT = np.clip(rhoT, -0.999, 0.999)
+        sigT = 0.15 + 0.25 * np.sqrt(T) ##curvature
+        mT   = -0.02 * np.exp(-2*T) ##horizontal shift
 
-            w = abs(k) / max(abs(k_min), abs(k_max))
-            noise_std = noise_atm * (1 - w) + noise_wings * w
-            iv_mid = iv + rng.normal(0.0, noise_std)
+        aT = w_atm - bT * (rhoT*(-mT) + np.sqrt(mT*mT + sigT*sigT)) #ATM : k = 0
+        aT = max(aT, 1e-6)
 
-            iv_spread = 0.002 + 0.006 * w
-            iv_bid = max(0.01, iv_mid - iv_spread / 2)
-            iv_ask = iv_mid + iv_spread / 2
+        for k in k_grid: #for each log moneyness value in the range k_min, k_max:
+            w = aT + bT*(rhoT*(k-mT) + np.sqrt((k-mT)**2 + sigT**2)) # total variance
+            iv = np.sqrt(w / T) #implied vol 
 
-            rows.append((t, days, float(K), "C", iv_mid, iv_bid, iv_ask, F))
-            rows.append((t, days, float(K), "P", iv_mid, iv_bid, iv_ask, F))
-            
+            iv += rng.normal(0.0, 0.002 + 0.004*abs(k))
+            iv = max(iv, 1e-4)  ##noise + clipping
 
-    df = pd.DataFrame(
+            K = F*np.exp(k) ## strike price from log-moneyness def (K = Fe^k))
+
+            #simple constant IV spread around mid (for demo purposes) :
+            rows.append((T, days, K, "C", iv, iv-0.003, iv+0.003, F, S0, r, q))
+            rows.append((T, days, K, "P", iv, iv-0.003, iv+0.003, F, S0, r, q))
+
+    return pd.DataFrame(
         rows,
-        columns=["T", "T_days", "K", "OptionType", "iv_mid", "iv_bid", "iv_ask", "F"]
+        columns=["T","T_days","K","OptionType","iv_mid","iv_bid","iv_ask","F","S0","r","q"]
     )
-    df["S0"] = S0
-    df["r"] = r
-    df["q"] = q
-    return df
 
 
-import numpy as np
-import pandas as pd
-from scipy.stats import norm
-from scipy.optimize import brentq
-
-def local_vol_equity(t, S, S0, sigma0=0.18, alpha=0.25, t0=0.20, beta=-0.35):
-    # smooth, equity-like skew + short-term elevation
-    x = np.log(max(S, 1e-12) / S0)
-    sig = sigma0 * (1.0 + alpha * np.exp(-t / t0) + beta * np.tanh(x))
-    return float(np.clip(sig, 0.03, 2.0))
-
-def bs_call_forward(F, K, T, r, vol):
-    if T <= 0:
-        return max(0.0, np.exp(-r*T)*(F-K))
-    vol = max(vol, 1e-12)
-    df = np.exp(-r*T)
-    srt = vol*np.sqrt(T)
-    d1 = (np.log(F/K) + 0.5*vol*vol*T)/srt
-    d2 = d1 - srt
-    return float(df*(F*norm.cdf(d1) - K*norm.cdf(d2)))
-
-def implied_vol_call(C, F, K, T, r):
-    df = np.exp(-r*T)
-    intrinsic = df*max(F-K, 0.0)
-    upper = df*F
-    C = float(np.clip(C, intrinsic, upper))
-
-    def f(v): return bs_call_forward(F, K, T, r, v) - C
-    return float(brentq(f, 1e-6, 3.0, maxiter=200))
-
-def make_chain_from_local_vol(
-    S0=100.0, r=0.02, q=0.00,
-    maturities_days=(14, 30, 60, 90, 180, 360),
-    log_moneyness_min=-0.20, log_moneyness_max=0.20, n_k=21,
-    n_paths=30000, steps_per_year=120, seed=0,
-    noise_iv_atm=0.0008, noise_iv_wings=0.0025
-):
-    rng = np.random.default_rng(seed)
-    k_grid = np.linspace(log_moneyness_min, log_moneyness_max, n_k)
-    rows = []
-
-    for days in maturities_days:
-        T = days/365.0
-        F = S0*np.exp((r-q)*T)
-        K_grid = F*np.exp(k_grid)
-
-        n_steps = max(2, int(np.ceil(T*steps_per_year)))
-        dt = T/n_steps
-
-        # simulate S_T under local vol via log-Euler
-        S = np.full(n_paths, S0, dtype=float)
-        t = 0.0
-        for _ in range(n_steps):
-            t += dt
-            # local vol per path (simple loop; ok for 30k paths)
-            sig = np.array([local_vol_equity(t, s, S0) for s in S], dtype=float)
-            Z = rng.standard_normal(n_paths)
-            S *= np.exp((r-q-0.5*sig*sig)*dt + sig*np.sqrt(dt)*Z)
-
-        df_disc = np.exp(-r*T)
-
-        # price calls
-        payoffs = np.maximum(S[:, None] - K_grid[None, :], 0.0)
-        C = df_disc * payoffs.mean(axis=0)
-
-        # implied vols from calls
-        iv = np.array([implied_vol_call(c, F, k, T, r) for c, k in zip(C, K_grid)], dtype=float)
-
-        # add tiny IV noise (optional), wings noisier
-        w = np.abs(k_grid)/max(abs(log_moneyness_min), abs(log_moneyness_max))
-        noise = (1-w)*noise_iv_atm + w*noise_iv_wings
-        iv_mid = np.clip(iv + rng.normal(0.0, noise), 0.03, 2.0)
-
-        # synthetic bid/ask spread in IV
-        iv_spread = 0.002 + 0.006*w
-        iv_bid = np.maximum(0.01, iv_mid - 0.5*iv_spread)
-        iv_ask = iv_mid + 0.5*iv_spread
-
-        for K, m, b, a in zip(K_grid, iv_mid, iv_bid, iv_ask):
-            rows.append((T, days, float(K), "C", float(m), float(b), float(a), float(F), S0, r, q))
-            rows.append((T, days, float(K), "P", float(m), float(b), float(a), float(F), S0, r, q))
-
-    return pd.DataFrame(rows, columns=["T","T_days","K","OptionType","iv_mid","iv_bid","iv_ask","F","S0","r","q"])
-
-
-def true_local_vol(t, lm):
-    """
-    Simple, smooth, equity-like local volatility
-    t : maturity (years)
-    lm: log-moneyness
-    """
-    sigma0 = 0.20
-    term = 0.05 * np.exp(-t / 0.5)          # short-term elevation
-    skew = -0.15 * lm * np.exp(-t / 1.0)    # downside skew that fades
-    curvature = 0.10 * lm**2
-
-    return sigma0 + term + skew + curvature
+make_synth_iv_chain_svi()
