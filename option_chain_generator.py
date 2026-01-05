@@ -1,5 +1,6 @@
-################################ Generation of option chain data 
 '''
+                                    Generation of option chain data 
+
 This function aims to generate synthetic option data based on the SVI model :
    
        w(k) = a + b * (rho*(k-m) + sqrt{(k-m)^2 + sigma**2)}
@@ -87,6 +88,3 @@ def make_synth_iv_chain_svi(
         rows,
         columns=["T","T_days","K","OptionType","iv_mid","iv_bid","iv_ask","F","S0","r","q"]
     )
-
-
-make_synth_iv_chain_svi()

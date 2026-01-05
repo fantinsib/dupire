@@ -76,8 +76,9 @@ class SVI:
         else:
             sqrt_wt = None
 
-        # ---------- Initialization (simple but solid) ----------
-        # m ~ center where w is smallest
+
+        user_init = init is not None
+
         if init is None:
             i_min = int(np.argmin(w))
             m0 = float(log_moneyness[i_min])
@@ -99,7 +100,19 @@ class SVI:
 
             init = SVIParams(a=a0, b=b0, rho=rho0, m=m0, sigma=sigma0)
 
-        x0 = np.array([init.a, init.b, init.rho, init.m, init.sigma], dtype=float)
+        # Build a few fallback inits to improve convergence on tough slices.
+        if user_init:
+            inits = [init]
+        else:
+            inits = []
+            rho_guesses = [-0.7, -0.2, 0.2]
+            sigma_guesses = [init.sigma * s for s in (0.5, 1.0, 2.0)]
+            b_guesses = [init.b]
+            for rho0 in rho_guesses:
+                for sigma0 in sigma_guesses:
+                    for b0 in b_guesses:
+                        a0 = max(0.0, float(np.min(w)) - b0 * sigma0)
+                        inits.append(SVIParams(a=a0, b=b0, rho=rho0, m=init.m, sigma=max(1e-8, sigma0)))
 
         # ---------- Bounds ----------
         # a can be slightly negative in raw fits, but for stability keep it >= -eps.
@@ -124,20 +137,30 @@ class SVI:
                 r = r * sqrt_wt
             return r
 
-        res = least_squares(
-            residuals,
-            x0=x0,
-            bounds=(lb, ub),
-            method="trf",
-            loss="linear",      
-            f_scale=1.0,
-            max_nfev=max_nfev,
-        )
+        best_res = None
+        for cand in inits:
+            x0 = np.array([cand.a, cand.b, cand.rho, cand.m, cand.sigma], dtype=float)
+            res = least_squares(
+                residuals,
+                x0=x0,
+                bounds=(lb, ub),
+                method="trf",
+                loss="linear",
+                f_scale=1.0,
+                max_nfev=max_nfev,
+                    x_scale="jac",
+            )
+            if best_res is None or res.cost < best_res.cost:
+                best_res = res
+            if res.success:
+                best_res = res
+                break
 
-        if not res.success:
-            raise RuntimeError(f"SVI fit failed: {res.message}")
+        if best_res is None or not best_res.success:
+            msg = best_res.message if best_res is not None else "no result"
+            raise RuntimeError(f"SVI fit failed after {len(inits)} inits: {msg}")
 
-        a, b, rho, m, sigma = res.x
+        a, b, rho, m, sigma = best_res.x
         return SVIParams(float(a), float(b), float(rho), float(m), float(sigma))
 
 
@@ -324,4 +347,3 @@ def plot_svi_interactive_html(
     output_path = Path(output_html).resolve()
     output_path.write_text(html, encoding="utf-8")
     webbrowser.open(output_path.as_uri())
-
