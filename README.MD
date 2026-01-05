@@ -46,7 +46,7 @@ $\sigma$: curvature, with $\sigma > 0$
 
 ***
 
-Node : the **[svi_interactive.html](svi_interactive.html)** file allows to play with the SVI parameters and visualize the resulting curve.
+Note : the **[svi_interactive.html](svi_interactive.html)** file allows to play with the SVI parameters and visualize the resulting curve.
 
 
 ### Fit results

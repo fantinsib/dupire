@@ -2,7 +2,6 @@
 
 *.pyc
 launch.json
-svi_interactive.html
 
 playground.ipynb
 .DS_Store
