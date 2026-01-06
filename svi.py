@@ -34,6 +34,8 @@ class SVI:
     
     def compute(self, log_moneyness: np.array, params: SVIParams):
         """
+        Computes SVI 
+
         Args:
         params: SVIParams object
 
@@ -90,8 +92,6 @@ class SVI:
             # b controls slope magnitude; use robust scale from w spread
             w_spread = float(np.percentile(w, 90) - np.percentile(w, 10))
             b0 = max(1e-6, w_spread / (log_moneyness_range + 1e-6))
-
-            # rho: skew; equity often negative, but keep neutral-ish initial guess
             rho0 = -0.2
 
             # a: set so that w(m) approximately matches
