@@ -5,7 +5,11 @@ This personal project focuses on the construction of a smooth implied volatility
 ## Background
 
 The classical Black–Scholes model assumes that the underlying asset price follows the SDE
+
+
 $$dS_t = \mu S_t\,dt + \sigma S_t\,dW_t$$
+
+
 with $\sigma$, the volatility of the underlying asset $S$, assumed to be known and constant. However, empirical analysis shows that when inverting Black-Scholes to solve for $\sigma$, the *implied volatility* obtained depends strongly on the strike price $K$ and the time to maturity $T$ of the option, leading to a curve taking the form of a smile when plotting $\sigma_{iv}$ as a function of $K$ for a given maturity.
 
 In *Pricing with a Smile* (1994), Bruno Dupire proposed a spot process compatible with the smile. The stock price $S$ is assumed to have the following SDE,
