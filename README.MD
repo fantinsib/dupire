@@ -43,7 +43,7 @@ Some choices were made from the start to ensure stability in the final local vol
 - *option_chain_generator.py* : the function used to generate the data
 - *svi.py* : functions for calculating & fitting SVI curve
 
-You are welcome to download the projet and run the notebook for the interactive 3D visualisation of certain components.
+All plots are available on [this link](https://fantinsib.github.io/dupire/). Alternatively, you are welcome to download the projet and run the notebook for the interactive 3D visualisation of certain components. 
 
 ## Data Generation
 
@@ -89,7 +89,7 @@ $\sigma: \text{curvature, with}$ $\sigma > 0$
 
 ***
 
-Note : the **[svi_interactive.html](interactive_plots/svi_interactive.html)** file allows to play with the SVI parameters and visualize the resulting curve.
+Note : **[this web page](https://fantinsib.github.io/dupire/svi_interactive.html)** allows to play with the SVI parameters and visualize the resulting curve.
 
 Our goal is to determine, for each unique maturity in our data, the SVI parameters that yield the best fitting curve for total variance ($w(k) = \sigma^2 * T$). This was done using the `scipy.optimize.least_square` method on the residual (please see svi.py for details about the implementation). 
 
@@ -99,7 +99,7 @@ Our goal is to determine, for each unique maturity in our data, the SVI paramete
 
 ![alt text](img/tiv_scatter_svi_fitted.png)
 
-Given that our data is originally generated from an SVI curve[^1], we find good fits (see [the interactive 3D plot](interactive_plots/svi_fit.html))
+Given that our data is originally generated from an SVI curve[^1], we find good fits (see [the interactive 3D plot for the fitted points](https://fantinsib.github.io/dupire/svi_fit.html))
 
 ## Interpolation    
 
@@ -135,7 +135,7 @@ $\partial_{kk} w \text{: second partial derivative of } w(k,T) \text{ with respe
 ---
 The main challenge in interpolation is to obtain a total variance surface that keeps $\partial_{kk} w$ as stable as possible. In addition, the surface must respect basic no-arbitrage principles; here this translates as the fact that total implied variance must grow with time in the interpolation. We aim to interpolate in a way that keep the derivatives as stable as possible and preserve the shape of the data. 
 
-We used the `PchipInterpolator` from `scipy` in order to interpolate between maturities. The result is shown in the following figures : 
+We used the `PchipInterpolator` from `scipy` in order to interpolate between maturities. The result is shown in the following figures for [the implied volatility surface](https://fantinsib.github.io/dupire/implied_vol_surface.html) and [the total implied variance surface](https://fantinsib.github.io/dupire/total_implied_var_surface.html) : 
 
 
 ### Implied Volatility Surface
@@ -205,10 +205,10 @@ The second derivative appears relatively stable, apart for some points for low l
 #### Dupire Local Volatility Surface
 ![alt text](img/dupire_loc_vol.png)
 
-The resulting local volatility surface shows that the second derivative becomes unstable as we enter deep OTM territories for short maturities. The flat structure of the surface for maturities beyond 0.5 is the consequence of the data generation process, which does not include a strong term structure effect. 
+The resulting [local volatility surface](https://fantinsib.github.io/dupire/dupire_surface.html) shows that the second derivative becomes unstable as we enter deep OTM territories for short maturities. The flat structure of the surface for maturities beyond 0.5 is the consequence of the data generation process, which does not include a strong term structure effect. 
 
 ### Thank you for reading
-You are welcome to download the project and run the notebook to explore the interactive 3D visualizations
+All contribution proposals & comments are always welcome!
 
 ### Notes
 ---
