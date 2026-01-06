@@ -8,7 +8,7 @@ This project aims at modeling local volatility using volatility surface and Dupi
 We first generate a synthetic option dataset and perform a preliminary exploratory analysis to inspect the implied volatility smiles across maturities. This step allows us to verify basic stylized facts such as the presence of skew and the term structure of volatility, and to ensure that the data are free of obvious arbitrage inconsistencies.
 
 **SVI calibration and interpolation**  
-For each maturity, we calibrate a Stochastic Volatility Inspired (SVI) parametrization to the observed implied volatilities. The calibrated SVI smiles are then interpolated across maturities to obtain a smooth and coherent implied volatility surface. Particular attention is paid to preserving stability and avoiding spurious oscillations.
+For each maturity, we calibrate a Stochastic Volatility Inspired (SVI) parametrization to the observed implied volatilities, and expect to find results close to the parameters used for data generation. The calibrated SVI smiles are then interpolated across maturities to obtain a smooth and coherent implied volatility surface. Particular attention is paid to preserving stability and avoiding spurious oscillations.
 
 **Dupire local volatility derivation**  
 Finally, we convert the implied volatility surface into a total implied variance surface and apply Dupire’s formula to derive the corresponding local volatility surface, which is suitable for further pricing and risk analysis.
@@ -54,29 +54,29 @@ We obtain data that present a visible smile (feel free to check the Jupyter note
 
 ## SVI Fit
 
-We start from the SVI model, which gives the following equation :
+We start from the SVI model, which models the total implied variance with the following formula :
 
-$$ w(k) = a + b(\rho (k-m) + \sqrt{(k-m)^2 +\sigma^2)} $$
+$$ w(k) = a + b(\rho (k-m) + \sqrt{(k-m)^2 +\sigma^2}) $$
 
 with :
 ***
-$w(k)$ : the total variance 
+$w(k) \text{: the total variance} $
 
-$a$ : minimum total variance
+$a : \text{minimum total variance} $
 
-$b$: slope of the curve ($b>0$)
+$b: \text{slope of the curve (b>0)}$
 
-$\rho$: the skew with $\rho \space \epsilon \space(-1,1)$
+$\rho \text{: the skew with}$ $\rho \in (-1,1)$
 
-$m$: center, location of smile minimum
+$m: \text{center, location of smile minimum}$
 
-$\sigma$: curvature, with $\sigma > 0$
+$\sigma: \text{curvature, with}$ $\sigma > 0$  
 
 ***
 
-Note : the **[svi_interactive.html](svi_interactive.html)** file allows to play with the SVI parameters and visualize the resulting curve.
+Note : the **[svi_interactive.html](interactive_plots/svi_interactive.html)** file allows to play with the SVI parameters and visualize the resulting curve.
 
-Our goal is to determine, for each unique maturity in our data, the SVI parameters that yield the best fitting curve. This was done using the `scipy.optimize.least_square` method on the residual (please see svi.py for details about the implementation). 
+Our goal is to determine, for each unique maturity in our data, the SVI parameters that yield the best fitting curve for total variance ($w(k) = \sigma^2 * T$). This was done using the `scipy.optimize.least_square` method on the residual (please see svi.py for details about the implementation). 
 
 ### Fit results
 
@@ -84,6 +84,55 @@ Our goal is to determine, for each unique maturity in our data, the SVI paramete
 
 ![alt text](img/tiv_scatter_svi_fitted.png)
 
+Given that our data is originally generated from an SVI curve, we find good fits (see [the interactive 3D plot](interactive_plots/svi_fit.html))
 
 ## Interpolation
 
+Dupire's formula is the following :
+
+
+$$
+\sigma_{\mathrm{loc}}^{2}(k,T)=\frac{\partial_T w}{1-
+\frac{k}{w}\,\partial_k w+\frac{1}{4}\left(-\frac{1}{w}+
+\frac{k^{2}}{w^{2}}\right)(\partial_k w)^2+
+\frac{1}{2}\,\partial_{kk} w}
+$$
+
+with :  
+
+---
+$\sigma_{\mathrm{loc}}(k,T) \text{ : local volatility}$
+
+$k = \log\!\left(\frac{K}{F_T}\right) \text{with: }$  
+
+$F_T = S_0 e^{(r-q)T}$  
+
+$\sigma_{\mathrm{imp}}(k,T) \text{ : implied volatility}$  
+
+$w(k,T) = \sigma_{\mathrm{imp}}^2(k,T)\,T$
+
+$\partial_T w \text{ : partial derivative of } w(k,T) \text{ with respect to }T \text{ at fixed }k$
+
+$\partial_k w \text{: partial derivative of } w(k,T) \text{ with respect to }k \text{ at fixed }T$
+
+$\partial_{kk} w \text{: second partial derivative of } w(k,T) \text{ with respect to }k \text{ at fixed }T$
+
+---
+The main challenge in interpolation is to obtain a total variance surface that keeps $\partial_{kk} w$ as stable as possible. In addition, the surface must respect basic no-arbitrage principles; here this translates as the fact that total implied variance must grow with time in the interpolation. We aim to interpolate in a way that that keep the derivatives as stable as possible and preserve the shape of the data. 
+
+We used the `PchipInterpolator` from `scipy` in order to interpolate between maturities. Result is shown in the following figures : 
+
+
+### Implied Volatility Surface
+
+![alt text](img/flat_ivol_surface.png)
+
+![alt text](img/smooth_implied_vol_surface.png)
+
+### Total Implied Volatility Surface
+
+![alt text](img/smooth_tiv_surface.png)
+
+## Local Volatility
+
+![alt text](img/second_der_tv.png)
