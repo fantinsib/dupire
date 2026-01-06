@@ -71,7 +71,7 @@ We obtain data that present a visible smile (feel free to check the Jupyter note
 
 We start from the SVI model, which models the total implied variance with the following formula :
 
-$$ w(k) = a + b(\rho (k-m) + \sqrt{(k-m)^2 +\sigma^2} $$
+$$ w(k) = a + b(\rho (k-m) + \sqrt{(k-m)^2 +\sigma^2}\space) $$
 
 with :
 ***
@@ -150,17 +150,65 @@ We used the `PchipInterpolator` from `scipy` in order to interpolate between mat
 
 ## Local Volatility
 
-From the total implied variance surface, we apply Dupire's formula to derive 
+From the total implied variance surface, we apply Dupire's formula to derive the local volatility. 
+
+### Derivative Calculations
+
+We computed the derivatives using central finite difference scheme :
+
+---
+***Time Derivative***
+
+*Inside points:*
+$$\partial_T w(T_i, k) \approx \frac{w(T_{i+1}, k) - w(T_{i-1}, k) }{T_{i+1} -T_{i-1}}$$
+
+
+*Borders:*  
+$$\partial_T w(T_0, k) \approx \frac{w(T_{1}, k) - w(T_{0}, k) }{T_{1} -T_{0}}$$
+
+$$\partial_T w(T_N, k) \approx \frac{w(T_N, k) - w(T_{N-1}, k) }{T_N -T_{N -1}}$$
+
+with $N$ the num of maturities in the grid
+
+---
+
+***Log-moneyness Derivatives***
+
+**First order derivative**
+
+*Inside points:*
+$$\partial_k w(T, k_j) \approx \frac{w(T, k_{j+1}) - w(T, k_{j-1}) }{k_{j+1} -k_{j-1}}$$
+
+
+*Borders:*  
+$$\partial_k w(T, k_0) \approx \frac{w(T, k_{1}) - w(T, k_{0}) }{k_{1} -k_{0}}$$
+$$\partial_k w(T, k_M) \approx \frac{w(T, k_M) - w(T, k_{M-1}) }{k_{M} -k_{M-1}}$$
+
+with $M$ the num of log-moneyness points
+
+**Second order derivative**
+
+$$\partial_{kk} w(T, k_j) \approx \frac{w(T, k_{j+1}) - 2w(T, k_j) + w(T, k_{j-1})}{h^2}$$
+
+with h the step in the log-moneyness grid (since it was generated using the np.linspace function, the grid is uniform by construction)
+
+For borders, we used flat extensions.
+
+---
+
+## Results
 
 ![alt text](img/second_der_tv.png)
 
+The second derivative appears relatively stable, apart for some points for low log-moneyness and short maturities. 
 
+#### Dupire Local Volatility Surface
+![alt text](img/dupire_loc_vol.png)
+
+The resulting local volatility surface shows that the second derivative becomes instable as we enter deep OTM territories for short maturities. The flat structure of the surface for maturities beyond 0.5 is the consequence of the data generation process, which does not include a strong term structure effect. 
 
 ### Thank you for reading
 You are welcome to download the project and run the notebook to explore the interactive 3D visualizations
-
-
-
 
 ### Notes
 ---
