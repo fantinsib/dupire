@@ -32,7 +32,7 @@ Finally, we convert the implied volatility surface into a total implied variance
 
 **Notes**  
 Some choices were made from the start to ensure stability in the final local volatility surface :  
-- The choice of relying on synthetic option data prevents from capturing all the real market features that would normally be observed
+- The choice of relying on synthetic option data prevents capturing all the real market features that would normally be observed
 - Short maturities (< 30 days) were excluded to ensure that the time derivatives stay stable
 - We kept a relatively low number of options for smoother interpolation 
 
@@ -43,7 +43,7 @@ Some choices were made from the start to ensure stability in the final local vol
 - *option_chain_generator.py* : the function used to generate the data
 - *svi.py* : functions for calculating & fitting SVI curve
 
-You are welcome to download the projet and run the notebook for the interactive 3D visualisation of certain component.
+You are welcome to download the projet and run the notebook for the interactive 3D visualisation of certain components.
 
 ## Data Generation
 
@@ -133,7 +133,7 @@ $\partial_k w \text{: partial derivative of } w(k,T) \text{ with respect to }k \
 $\partial_{kk} w \text{: second partial derivative of } w(k,T) \text{ with respect to }k \text{ at fixed }T$
 
 ---
-The main challenge in interpolation is to obtain a total variance surface that keeps $\partial_{kk} w$ as stable as possible. In addition, the surface must respect basic no-arbitrage principles; here this translates as the fact that total implied variance must grow with time in the interpolation. We aim to interpolate in a way that that keep the derivatives as stable as possible and preserve the shape of the data. 
+The main challenge in interpolation is to obtain a total variance surface that keeps $\partial_{kk} w$ as stable as possible. In addition, the surface must respect basic no-arbitrage principles; here this translates as the fact that total implied variance must grow with time in the interpolation. We aim to interpolate in a way that keep the derivatives as stable as possible and preserve the shape of the data. 
 
 We used the `PchipInterpolator` from `scipy` in order to interpolate between maturities. The result is shown in the following figures : 
 
@@ -205,7 +205,7 @@ The second derivative appears relatively stable, apart for some points for low l
 #### Dupire Local Volatility Surface
 ![alt text](img/dupire_loc_vol.png)
 
-The resulting local volatility surface shows that the second derivative becomes instable as we enter deep OTM territories for short maturities. The flat structure of the surface for maturities beyond 0.5 is the consequence of the data generation process, which does not include a strong term structure effect. 
+The resulting local volatility surface shows that the second derivative becomes unstable as we enter deep OTM territories for short maturities. The flat structure of the surface for maturities beyond 0.5 is the consequence of the data generation process, which does not include a strong term structure effect. 
 
 ### Thank you for reading
 You are welcome to download the project and run the notebook to explore the interactive 3D visualizations
