@@ -160,11 +160,16 @@ We computed the derivatives using central finite difference scheme :
 ***Time Derivative***
 
 *Inside points:*
+
+
 $$\partial_T w(T_i, k) \approx \frac{w(T_{i+1}, k) - w(T_{i-1}, k) }{T_{i+1} -T_{i-1}}$$
 
 
 *Borders:*  
+
+
 $$\partial_T w(T_0, k) \approx \frac{w(T_{1}, k) - w(T_{0}, k) }{T_{1} -T_{0}}$$
+
 
 $$\partial_T w(T_N, k) \approx \frac{w(T_N, k) - w(T_{N-1}, k) }{T_N -T_{N -1}}$$
 
@@ -177,11 +182,17 @@ with $N$ the num of maturities in the grid
 **First order derivative**
 
 *Inside points:*
+
+
 $$\partial_k w(T, k_j) \approx \frac{w(T, k_{j+1}) - w(T, k_{j-1}) }{k_{j+1} -k_{j-1}}$$
 
 
-*Borders:*  
+*Borders:*
+
+
 $$\partial_k w(T, k_0) \approx \frac{w(T, k_{1}) - w(T, k_{0}) }{k_{1} -k_{0}}$$
+
+
 $$\partial_k w(T, k_M) \approx \frac{w(T, k_M) - w(T, k_{M-1}) }{k_{M} -k_{M-1}}$$
 
 with $M$ the num of log-moneyness points
