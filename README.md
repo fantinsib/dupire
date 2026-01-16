@@ -36,16 +36,22 @@ Finally, we visualize the implied volatility and total implied variance surface 
 
 **Notes**  
 Some remarks about the choices and terms used throughout this work :
-- the *market price* as referred in the notebook and in this readme is defined as the midpoint between the ask and bid price : $$C_{market} = \frac{C_{ask} + C_{bid}}{2}$$
-- log-moneyness $k$ is calculated as :
-$$ k = \log(\frac{K}F) \\
+- the *market price* as referred in the notebook and in this readme is defined as the midpoint between the ask and bid price : 
 
-with \space F = S \times e^{rT}
-$$
+$$C_{market} = \frac{C_{ask} + C_{bid}}{2}$$
+
+
+- log-moneyness $k$ is calculated as :
+
+$$k = \log(\frac{K}F)$$
+
+
+$$\space F = S \times e^{rT}$$
+
 - total variance $w$ is calculated as :
-$$
-w = \sigma_{imp \space vol}^2 \times T_{years}
-$$
+
+$$w = \sigma_{imp \space vol}^2 \times T_{years}$$
+
 - the maturities chosen are 1M, 2M, 3M, 6M, 8M and 1Y as of the date of writing of this project (january 2026). The corresponding data used can be found in the "SPY_option_chain.csv" file.
 - we assume the risk-free rate to be constant throughout maturities, and equal to 2%. 
 - some of the calculations and data manipulations rely on tools developed in a separate module. The original code can be found in the [qtools repository](https://github.com/fantinsib/qtools), but this module may evolve over time and some functions may change their behavior. For the sake of reproducibility, a snapshot of the code as it existed at the time of development is included in the `qtools` folder of this repository to ensure that all results can be reproduced exactly.
@@ -99,11 +105,11 @@ In order to filter our data points for our SVI fit, we will proceed to fit a spl
 
 Subsequently, we calculated the MAD (Median Absolute Deviation). Starting with the normalised residuals for market point $i$,
 
-$$ r_i = \frac{w_i - \hat w_{spline}(k_i)}{\hat w_{spline}(k_i)}$$
+$$r_i = \frac{w_i - \hat w_{spline}(k_i)}{\hat w_{spline}(k_i)}$$
 
 Normalization ensures that residuals are measured in relative terms, so that deviations in the wings where the level of total variance is higher are not given disproportionate weight compared to near-ATM points. The MAD is then given by
 
-$$ MAD = median(|r_i - median(r_i)|)$$
+$$MAD = median(|r_i - median(r_i)|)$$
 
 
 And we then filter each market quote $i$ on the condition that :
@@ -127,7 +133,7 @@ After applying this filtering, our final working dataset of quotes is the follow
 
 We start from the SVI model, which models the total implied variance with the following formula :
 
-$$ w(k) = a + b(\rho (k-m) + \sqrt{(k-m)^2 +\sigma^2}\space) $$
+$$w(k) = a + b(\rho (k-m) + \sqrt{(k-m)^2 +\sigma^2}\space)$$
 
 with :
 ***
@@ -155,27 +161,28 @@ In the first fit, we followed a "naive" fit, without any regularization. For the
 
 - The first "naive fit" for the parameters simply minimzes the unweighted squared error between $\hat w(k_i, \theta)$, the SVI-calculated total variance for market quote with log moneyness $k_i$ and SVI parameters $\theta$ and the target total variance $w_i$, observed from market points. The calibration problem therefore is :
 
-$$ \min_{\theta} \sum_{i} (\hat w(k_i, \theta) - w_{i})^2$$
+$$\min_{\theta} \sum_{i} (\hat w(k_i, \theta) - w_{i})^2$$
 
-with $$ \theta = (a, b, \rho, m, \sigma)$$
+with $$\theta = (a, b, \rho, m, \sigma)$$
 
 - In the second approach, we normalise the squared residual and a add a weight vector $\omega$ to svi_fit(). We also add a stabilisation parameter $\lambda$ in order to prevent excessively large normal residuals when the target variance is small. The residual function to minimize becomes
+
 $$\min_{\theta} \sum_i \omega_i \left(\frac{\hat w(k_i, \theta) - w_{i}}{\max(w_{i}, \epsilon) + \lambda} \right )^2$$
 
 with $\epsilon > 0$ to ensure numerical stability and $\omega$ a weight vector passed to the function.
 
 For the weight vector, we will take into account two considerations : favor options that are near ATM and options with lower spread to give more importance to cleaner quotes. Our weight vector hence will be 
 
-$$ \omega_i = \omega_i^{spread} \times \omega_i^{ATM} $$
+$$\omega_i = \omega_i^{spread} \times \omega_i^{ATM}$$
 
 with:
-$$ \omega_i^{spread} = \frac{1}{\epsilon + (rs_i) ^{2}} $$
+$$\omega_i^{spread} = \frac{1}{\epsilon + (rs_i) ^{2}}$$
 
 $rs_i$ being the relative spread of option $i$
 
 And
 
-$$\omega_i^{ATM} = exp(-\frac{k_i^{2}}{2\sigma_k^{2}}) $$
+$$\omega_i^{ATM} = exp(-\frac{k_i^{2}}{2\sigma_k^{2}})$$
 
 ### Fit results
 
@@ -202,11 +209,7 @@ The result indicates that the fitted SVI surface does not exhibit calendar sprea
 
 Dupire's formula is the following :
 
-$$
-
-\sigma_{loc}^2(K,T) = \frac{\partial_T C(K,T) + r(T)\space K\space \partial_K C(K,T)}{\frac{1}{2} K^2 \partial_{KK} C(K,T)}
-
-$$
+$$\sigma_{loc}^2(K,T) = \frac{\partial_T C(K,T) + r(T)\space K\space \partial_K C(K,T)}{\frac{1}{2} K^2 \partial_{KK} C(K,T)}$$
 
 with : 
 
