@@ -32,9 +32,7 @@ For each maturity, we calibrate a Stochastic Volatility Inspired (SVI) parametri
 **Dupire local volatility derivation**  
 Finally, we visualize the implied volatility and total implied variance surface and apply Dupire’s formula on the $C(K,T)$ surface to derive the corresponding local volatility surface.
 
----
-
-**Notes**  
+## Notes  
 Some remarks about the choices and terms used throughout this work :
 - the *market price* as referred in the notebook and in this readme is defined as the midpoint between the ask and bid price : 
 
@@ -52,30 +50,34 @@ $$\space F = S \times e^{rT}$$
 
 $$w = \sigma_{imp \space vol}^2 \times T_{years}$$
 
-- the maturities chosen are 1M, 2M, 3M, 6M, 8M and 1Y as of the date of writing of this project (january 2026). The corresponding data used can be found in the "SPY_option_chain.csv" file.
+- the maturities chosen are 1M, 2M, 3M, 6M, 8M and 1Y as of the date of writing of this project (january 2026). The corresponding data used can be found in the [SPY_option_chain.csv](https://github.com/fantinsib/dupire/blob/master/SPY_option_chain.csv) file in this repo.
 - we assume the risk-free rate to be constant throughout maturities, and equal to 2%. 
 - some of the calculations and data manipulations rely on tools developed in a separate module. The original code can be found in the [qtools repository](https://github.com/fantinsib/qtools), but this module may evolve over time and some functions may change their behavior. For the sake of reproducibility, a snapshot of the code as it existed at the time of development is included in the `qtools` folder of this repository to ensure that all results can be reproduced exactly.
 
-All plots are available on [this link](https://fantinsib.github.io/dupire/). Alternatively, you are welcome to download the projet and run the notebook for the interactive 3D visualisation of certain components. 
+---
+
+**Data Visualization & Website**
+
+This project contains multiple interactive 3D plots. All are available to visualize on **[this link](https://fantinsib.github.io/dupire/index.html)**. Alternatively, you are welcome to download the projet and run the notebook for the interactive 3D visualisation of certain components. 
 
 ## Data Retrieval
 
-The option chain used has been retrieved through the `fetch_option_data` function of the `option.py` module in qtools. This function serves as a wrapper around the yfinance API, and simply loads the data in a pandas.DataFrame, adding a column "S" for the price of the spot at the moment the function is ran. After computing the IV, a rapid plot of the smile gives the following for each maturity :
+The option chain used has been retrieved through the `fetch_option_data` function of the `option.py` module in qtools. This function serves as a wrapper around the yfinance API, and simply loads the data in a pandas.DataFrame, adding a column "S" for the price of the spot at the moment the function is ran. After computing the IV, a rapid plot of the smile gives the [following](https://fantinsib.github.io/dupire/index.html?p=data_viz%2Fiv_k_T_all_points_spread.html) for each maturity :
 
 ![alt text](img/data_prep/smile_per_maturity.png)
 
 
 ## Data Cleaning
 
-In order to keep only reliable option data, two rules were applied:
 
 ### Preliminary cleaning
 
 ---
 
-Only options with log-moneyness in $[−0.2,0.2]$ and a relative bid–ask spread below 20% were kept to ensure adequate liquidity.
+Only options with log-moneyness in $[−0.2,0.2]$ and a relative bid–ask spread below 20% were kept to ensure adequate liquidity. The cutoff is showed in the following plot (you can click the image for interactive visualization).
 
-![alt text](img/data_prep/point_selection.png)
+[![alt text](img/data_prep/point_selection.png)](https://fantinsib.github.io/dupire/index.html?p=data_viz%2Fiv_k_T_cutted_points.html)
+
 
 ### $C(K)$ and $w(k)$ derivatives
 
@@ -122,7 +124,7 @@ Where the coefficient $c$ was here set to 4.
 
 ---
 
-After applying this filtering, our final working dataset of quotes is the following : 
+After applying this filtering, our final working dataset of quotes is the [following](https://fantinsib.github.io/dupire/index.html?p=data_cleaning%2Ffinal_working_quotes.html) : 
 
 ![alt text](img/data_prep/spline/smile_per_mat_filtered.png)
 
@@ -151,7 +153,7 @@ $\sigma: \text{curvature, with}$ $\sigma > 0$
 
 ***
 
-Note : **[this page](https://fantinsib.github.io/dupire/svi_interactive.html)** allows to play with the SVI parameters and visualize the resulting curve.
+Note : **[this page](https://fantinsib.github.io/dupire/svi/svi_interactive.html)** allows to play with the SVI parameters and visualize the resulting curve.
 
 Our goal is to determine, for each unique maturity in our data, the SVI parameters that yield the best fitting curve for total variance ($w(k) = \sigma^2 * T$). This was done using the `fit_svi()` function in qtools.svi. This function relies on the `scipy.optimize.least_square` method.
 
@@ -196,6 +198,7 @@ With $\epsilon$ set to $1e-6$, and $\lambda$ set to be the median of the target 
 
 ![alt text](img/svi_fit/svi_fit_norm.png)
 
+Both fit and market quotes can be vizualised [here](https://fantinsib.github.io/dupire/index.html?p=svi%2Fsvi_fit_with_quotes.html).
 
 One of the limitation of SVI, which explains why SSVI is usually preferred, is that the model does not enforce a time structure across maturities. If each maturity is fit independantly, SVI can result in calendar spread arbitrage, if the monotonicity condition $\partial_T C(K,T) \ge 0$ is violated. 
 
@@ -232,7 +235,7 @@ The main challenge in interpolation is to obtain a $C(K,T)$ surface that keeps t
 
 As the normalized SVI fit yields slightly lower errors for near-ATM market quotes, we rely on the corresponding implied volatility surface for interpolation. Using the SVI-derived volatility, Black–Scholes call prices are computed for each maturity on a fixed strike grid $K$ :
 
-![alt text](img/svi_fit/svi_norm_fit_3D_3.png)
+[![alt text](img/svi_fit/svi_norm_fit_3D_3.png)](https://fantinsib.github.io/dupire/index.html?p=svi%2FC_K_curves.html)
 
 The resulting call price curves $C(K,T)$ are then interpolated across maturities to obtain a smooth dependence in $T$.  We used the `PchipInterpolator` from `scipy` in order to interpolate; this choice is motivated by the fact that PCHIP interpolation preserves moniticity and avoids overshooting between maturities, maintaining the shape of the original data. Plotting the heatmap of $\partial_T C(K,T)$ afterwards gives the following :
 
@@ -244,11 +247,11 @@ Which shows no apparent violation of the monotonicity condition $\partial_T C(K,
 
 From there, we calculate the implied volatility surface :
 
-![alt text](img/interpolation/implied_vol_surface.png)
+[![alt text](img/interpolation/implied_vol_surface.png)](https://fantinsib.github.io/dupire/index.html?p=surface%2Fiv_surface.html)
 
 And we then compute the total implied variance surface :
 
-![alt text](img/interpolation/total_variance_surface.png)
+[![alt text](img/interpolation/total_variance_surface.png)](https://fantinsib.github.io/dupire/index.html?p=surface%2Ftvi.html)
 
 ---
 
@@ -318,9 +321,9 @@ The second derivative appears relatively stable. More importantly, the heatmap i
 ![alt text](img/results/second_der_heatmap.png)
 
 ### Dupire Local Volatility Surface
-![alt text](img/results/loc_vol_surface.png)
+[![alt text](img/results/loc_vol_surface.png)](https://fantinsib.github.io/dupire/index.html?p=surface%2Floc_vol.html)
 
-The resulting [local volatility surface](https://fantinsib.github.io/dupire/dupire_surface.html) is positive and continuous across strikes and maturities, indicating that the Dupire construction is well-defined on the considered domain. The surface exhibits higher local volatility levels around near-ATM strikes, particularly at short maturities, while flattening as maturity increases. Sharp local variations can be observed in the wings, which are a well-known feature of local volatility models and reflect the high sensitivity of Dupire’s formula to the second derivative of call prices. These effects do not indicate arbitrage but rather highlight the intrinsic instability of local volatility outside the most liquid regions of the smile.
+The resulting [local volatility surface](https://fantinsib.github.io/dupire/index.html?p=surface%2Floc_vol.html) is positive and continuous across strikes and maturities, indicating that the Dupire construction is well-defined on the considered domain. The surface exhibits higher local volatility levels around near-ATM strikes, particularly at short maturities, while flattening as maturity increases. Sharp local variations can be observed in the wings, which are a well-known feature of local volatility models and reflect the high sensitivity of Dupire’s formula to the second derivative of call prices. These effects do not indicate arbitrage but rather highlight the intrinsic instability of local volatility outside the most liquid regions of the smile.
 
 ### Thank you for reading
-All contribution proposals & comments are always welcome!
+All contribution proposals & comments are welcome!
