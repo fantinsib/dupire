@@ -1,0 +1,620 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Dupire Volatility Modeling - 3D Plots</title>
+
+  <style>
+    :root{
+      --bg: #0b0f14;
+      --panel: rgba(255,255,255,0.06);
+      --panel2: rgba(255,255,255,0.08);
+      --text: rgba(255,255,255,0.92);
+      --muted: rgba(255,255,255,0.62);
+      --border: rgba(255,255,255,0.12);
+      --shadow: 0 12px 32px rgba(0,0,0,0.45);
+      --radius: 18px;
+      --accent: #7dd3fc;
+      --accent2:#a78bfa;
+    }
+
+    *{ box-sizing: border-box; }
+    html, body{ height: 100%; }
+    body{
+      margin: 0;
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+      color: var(--text);
+      background:
+        radial-gradient(1200px 600px at 10% 0%, rgba(125,211,252,0.18), transparent 60%),
+        radial-gradient(900px 500px at 90% 10%, rgba(167,139,250,0.16), transparent 55%),
+        radial-gradient(700px 420px at 50% 90%, rgba(34,211,238,0.08), transparent 60%),
+        var(--bg);
+    }
+
+    .wrap{
+      max-width: 1250px;
+      margin: 0 auto;
+      padding: 28px 18px 22px;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    header{
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    .title{
+      line-height: 1.15;
+    }
+    .title h1{
+      margin: 0;
+      font-size: 28px;
+      letter-spacing: -0.02em;
+    }
+
+    .pill{
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      background: rgba(255,255,255,0.04);
+      color: var(--muted);
+      font-size: 12px;
+      white-space: nowrap;
+    }
+    .dot{
+      width: 8px; height: 8px; border-radius: 999px;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      box-shadow: 0 0 16px rgba(125,211,252,0.35);
+    }
+
+    /* Layout: sidebar + viewer */
+    .layout{
+      display: grid;
+      grid-template-columns: 420px 1fr;
+      gap: 14px;
+      min-height: 0;
+      flex: 1 1 auto;
+    }
+
+    .sidebar{
+      min-height: 0;
+      overflow: auto;
+      padding-bottom: 4px;
+    }
+
+    .viewer{
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .card{
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .cardHeader{
+      padding: 14px 16px;
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 14px;
+      background: linear-gradient(180deg, rgba(255,255,255,0.05), rgba(255,255,255,0.02));
+      border-bottom: 1px solid var(--border);
+    }
+
+    .cardHeader h2{
+      margin: 0;
+      font-size: 16px;
+      letter-spacing: -0.01em;
+    }
+    .cardHeader .sub{
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .list{
+      padding: 10px;
+      display: grid;
+      gap: 8px;
+    }
+
+    button.item{
+      width: 100%;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+
+      padding: 12px 12px;
+      border-radius: 14px;
+      border: 1px solid rgba(255,255,255,0.08);
+      background: rgba(0,0,0,0.18);
+      color: var(--text);
+      text-decoration: none;
+      text-align: left;
+      transition: transform 0.08s ease, background 0.12s ease, border-color 0.12s ease;
+    }
+
+    button.item:hover{
+      transform: translateY(-1px);
+      background: rgba(255,255,255,0.06);
+      border-color: rgba(255,255,255,0.14);
+    }
+
+    button.item.active{
+      border-color: rgba(125,211,252,0.35);
+      background: linear-gradient(135deg, rgba(125,211,252,0.12), rgba(167,139,250,0.10));
+    }
+
+    .left{
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-width: 0;
+    }
+
+    .badge{
+      width: 34px;
+      height: 34px;
+      border-radius: 12px;
+      display: grid;
+      place-items: center;
+      border: 1px solid rgba(255,255,255,0.12);
+      background: linear-gradient(135deg, rgba(125,211,252,0.14), rgba(167,139,250,0.12));
+      flex: 0 0 auto;
+    }
+
+    .name{
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      min-width: 0;
+    }
+    .name strong{
+      font-size: 13px;
+      font-weight: 650;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .name span{
+      font-size: 12px;
+      color: var(--muted);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .arrow{
+      color: rgba(255,255,255,0.65);
+      flex: 0 0 auto;
+      font-size: 16px;
+      transform: translateY(-1px);
+    }
+
+    /* Viewer header */
+    .viewerTop{
+      padding: 12px 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      background: rgba(255,255,255,0.03);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+    }
+
+    .now{
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .now .label{
+      color: var(--muted);
+      font-size: 12px;
+    }
+    .now .value{
+      font-size: 13px;
+      font-weight: 650;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .actions{
+      display: flex;
+      gap: 8px;
+      flex: 0 0 auto;
+    }
+
+    .btn{
+      cursor: pointer;
+      border: 1px solid rgba(255,255,255,0.12);
+      background: rgba(0,0,0,0.18);
+      color: var(--text);
+      border-radius: 12px;
+      padding: 9px 10px;
+      font-size: 12px;
+      transition: background 0.12s ease, border-color 0.12s ease, transform 0.08s ease;
+      user-select: none;
+    }
+    .btn:hover{
+      transform: translateY(-1px);
+      background: rgba(255,255,255,0.06);
+      border-color: rgba(255,255,255,0.18);
+    }
+
+    /* Iframe */
+    .frameWrap{
+      flex: 1 1 auto;
+      min-height: 0;
+      border-radius: var(--radius);
+      overflow: hidden;
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow);
+      background: rgba(0,0,0,0.18);
+    }
+
+    iframe{
+      width: 100%;
+      height: 100%;
+      border: 0;
+      background: #111;
+    }
+
+    /* Empty state */
+    .empty{
+      height: 100%;
+      display: grid;
+      place-items: center;
+      padding: 22px;
+      color: var(--muted);
+      font-size: 13px;
+      text-align: center;
+    }
+    .empty strong{ color: var(--text); }
+
+    footer{
+      color: var(--muted);
+      font-size: 12px;
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      flex-wrap: wrap;
+      padding-top: 2px;
+    }
+
+    @media (max-width: 980px){
+      .layout{ grid-template-columns: 1fr; }
+      .sidebar{ order: 2; }
+      .viewer{ order: 1; }
+      .wrap{ padding: 22px 14px 18px; }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="wrap">
+    <header>
+      <div class="title">
+        <h1>Dupire Volatility Modeling - 3D Plots</h1>
+      </div>
+      <div class="pill"><span class="dot"></span> Local HTML dashboard</div>
+    </header>
+
+    <div class="layout">
+      <!-- LEFT: your sections -->
+      <div class="sidebar">
+        <!-- 1) Data Visualization -->
+        <section class="card">
+          <div class="cardHeader">
+            <h2>1 — Data Visualization</h2>
+            <div class="sub">5 files</div>
+          </div>
+          <div class="list">
+            <button class="item" data-href="data_viz/iv_k_T_all_points.html" data-title="IV (K, T) — all points">
+              <div class="left">
+                <div class="badge">📈</div>
+                <div class="name">
+                  <strong>IV (K, T) — all points</strong>
+                  <span>data_viz/iv_k_T_all_points.html</span>
+                </div>
+              </div>
+              <div class="arrow">→</div>
+            </button>
+
+            <button class="item" data-href="data_viz/iv_k_T_all_points_spread.html" data-title="IV (K, T) — all points + spread">
+              <div class="left">
+                <div class="badge">💱</div>
+                <div class="name">
+                  <strong>IV (K, T) — all points + spread</strong>
+                  <span>data_viz/iv_k_T_all_points_spread.html</span>
+                </div>
+              </div>
+              <div class="arrow">→</div>
+            </button>
+
+            <button class="item" data-href="data_viz/iv_k_T_cleaned_quote.html" data-title="IV (K, T) — cleaned quotes">
+              <div class="left">
+                <div class="badge">🧼</div>
+                <div class="name">
+                  <strong>IV (K, T) — cleaned quotes</strong>
+                  <span>data_viz/iv_k_T_cleaned_quote.html</span>
+                </div>
+              </div>
+              <div class="arrow">→</div>
+            </button>
+
+            <button class="item" data-href="data_viz/iv_k_T_cutted_points.html" data-title="IV (K, T) — cut points">
+              <div class="left">
+                <div class="badge">✂️</div>
+                <div class="name">
+                  <strong>IV (K, T) — cut points</strong>
+                  <span>data_viz/iv_k_T_cutted_points.html</span>
+                </div>
+              </div>
+              <div class="arrow">→</div>
+            </button>
+
+            <button class="item" data-href="data_viz/w_k_T_cleaned_quote.html" data-title="Total variance w(K, T) — cleaned">
+              <div class="left">
+                <div class="badge">🧩</div>
+                <div class="name">
+                  <strong>Total variance w(K, T) — cleaned</strong>
+                  <span>data_viz/w_k_T_cleaned_quote.html</span>
+                </div>
+              </div>
+              <div class="arrow">→</div>
+            </button>
+          </div>
+        </section>
+
+        <!-- 2) Data Cleaning -->
+        <section class="card" style="margin-top:14px;">
+          <div class="cardHeader">
+            <h2>2 — Data Cleaning</h2>
+            <div class="sub">3 files</div>
+          </div>
+          <div class="list">
+            <button class="item" data-href="data_cleaning/market_quotes_filtered.html" data-title="Market quotes — filtered">
+              <div class="left">
+                <div class="badge">🧹</div>
+                <div class="name">
+                  <strong>Market quotes — filtered</strong>
+                  <span>data_cleaning/market_quotes_filtered.html</span>
+                </div>
+              </div>
+              <div class="arrow">→</div>
+            </button>
+
+            <button class="item" data-href="data_cleaning/final_working_quotes.html" data-title="Final working quotes">
+              <div class="left">
+                <div class="badge">✅</div>
+                <div class="name">
+                  <strong>Final working quotes</strong>
+                  <span>data_cleaning/final_working_quotes.html</span>
+                </div>
+              </div>
+              <div class="arrow">→</div>
+            </button>
+
+            <button class="item" data-href="data_cleaning/final_working_quotes_w.html" data-title="Final working quotes (w)">
+              <div class="left">
+                <div class="badge">🧾</div>
+                <div class="name">
+                  <strong>Final working quotes (w)</strong>
+                  <span>data_cleaning/final_working_quotes_w.html</span>
+                </div>
+              </div>
+              <div class="arrow">→</div>
+            </button>
+          </div>
+        </section>
+
+        <!-- 3) SVI -->
+        <section class="card" style="margin-top:14px;">
+          <div class="cardHeader">
+            <h2>3 — SVI</h2>
+            <div class="sub">2 files</div>
+          </div>
+          <div class="list">
+            <button class="item" data-href="svi/svi_fit_with_quotes.html" data-title="SVI fit with quotes">
+              <div class="left">
+                <div class="badge">📐</div>
+                <div class="name">
+                  <strong>SVI fit with quotes</strong>
+                  <span>svi/svi_fit_with_quotes.html</span>
+                </div>
+              </div>
+              <div class="arrow">→</div>
+            </button>
+
+            <button class="item" data-href="svi/C_K_curves.html" data-title="C(K) curves">
+              <div class="left">
+                <div class="badge">🧮</div>
+                <div class="name">
+                  <strong>C(K) curves</strong>
+                  <span>svi/C_K_curves.html</span>
+                </div>
+              </div>
+              <div class="arrow">→</div>
+            </button>
+          </div>
+        </section>
+
+        <!-- 4) Surface -->
+        <section class="card" style="margin-top:14px;">
+          <div class="cardHeader">
+            <h2>4 — Surface</h2>
+            <div class="sub">3 files</div>
+          </div>
+          <div class="list">
+            <button class="item" data-href="surface/iv_surface.html" data-title="Implied volatility surface">
+              <div class="left">
+                <div class="badge">🌐</div>
+                <div class="name">
+                  <strong>Implied volatility surface</strong>
+                  <span>surface/iv_surface.html</span>
+                </div>
+              </div>
+              <div class="arrow">→</div>
+            </button>
+
+            <button class="item" data-href="surface/tvi.html" data-title="Total variance interpolation (TVI)">
+              <div class="left">
+                <div class="badge">🧷</div>
+                <div class="name">
+                  <strong>Total variance interpolation (TVI)</strong>
+                  <span>surface/tvi.html</span>
+                </div>
+              </div>
+              <div class="arrow">→</div>
+            </button>
+
+            <button class="item" data-href="surface/loc_vol.html" data-title="Local volatility">
+              <div class="left">
+                <div class="badge">⚡</div>
+                <div class="name">
+                  <strong>Local volatility</strong>
+                  <span>surface/loc_vol.html</span>
+                </div>
+              </div>
+              <div class="arrow">→</div>
+            </button>
+          </div>
+        </section>
+      </div>
+
+      <!-- RIGHT: viewer -->
+      <div class="viewer">
+        <div class="viewerTop">
+          <div class="now">
+            <div class="label">Now viewing</div>
+            <div class="value" id="nowTitle">Select a plot on the left</div>
+          </div>
+          <div class="actions">
+            <button class="btn" id="openNew" type="button" disabled>Open in new tab ↗</button>
+            <button class="btn" id="copyLink" type="button" disabled>Copy path</button>
+          </div>
+        </div>
+
+        <div class="frameWrap" id="frameWrap">
+          <div class="empty" id="emptyState">
+            <div>
+              <strong>No plot selected.</strong><br/>
+              Click a card item on the left to load it here.
+            </div>
+          </div>
+          <iframe id="frame" title="Plot viewer" loading="lazy" style="display:none;"></iframe>
+        </div>
+      </div>
+    </div>
+
+    <footer>
+      <div>Tip: open this file with a local server if your browser blocks some local JS.</div>
+      <div>© Your report</div>
+    </footer>
+  </div>
+
+  <script>
+    (function(){
+      const buttons = Array.from(document.querySelectorAll("button.item"));
+      const frame = document.getElementById("frame");
+      const empty = document.getElementById("emptyState");
+      const nowTitle = document.getElementById("nowTitle");
+      const openNew = document.getElementById("openNew");
+      const copyLink = document.getElementById("copyLink");
+
+      function setActive(btn){
+        buttons.forEach(b => b.classList.toggle("active", b === btn));
+      }
+
+      function load(btn, pushHistory=true){
+        const href = btn.getAttribute("data-href");
+        const title = btn.getAttribute("data-title") || href;
+
+        setActive(btn);
+        nowTitle.textContent = title;
+
+        frame.src = href;
+        frame.style.display = "block";
+        empty.style.display = "none";
+
+        openNew.disabled = false;
+        copyLink.disabled = false;
+
+        openNew.onclick = () => window.open(href, "_blank", "noopener");
+        copyLink.onclick = async () => {
+          try{
+            await navigator.clipboard.writeText(href);
+            copyLink.textContent = "Copied ✓";
+            setTimeout(() => copyLink.textContent = "Copy path", 900);
+          }catch(e){
+            // clipboard can fail when not served over http(s)
+            prompt("Copy this path:", href);
+          }
+        };
+
+        if (pushHistory){
+          const url = new URL(window.location.href);
+          url.searchParams.set("p", href);
+          window.history.pushState({p: href, t: title}, "", url.toString());
+        }
+      }
+
+      buttons.forEach(btn => {
+        btn.addEventListener("click", () => load(btn, true));
+      });
+
+      // Restore from URL (?p=...) or from back/forward navigation
+      function restoreFromURL(){
+        const url = new URL(window.location.href);
+        const p = url.searchParams.get("p");
+        if (!p) return;
+
+        const btn = buttons.find(b => b.getAttribute("data-href") === p);
+        if (btn) load(btn, false);
+        else {
+          // if file path is unknown, still try to load it
+          nowTitle.textContent = p;
+          frame.src = p;
+          frame.style.display = "block";
+          empty.style.display = "none";
+          openNew.disabled = false;
+          copyLink.disabled = false;
+          openNew.onclick = () => window.open(p, "_blank", "noopener");
+          copyLink.onclick = async () => {
+            try{ await navigator.clipboard.writeText(p); }catch(e){ prompt("Copy this path:", p); }
+          };
+        }
+      }
+
+      window.addEventListener("popstate", (e) => {
+        restoreFromURL();
+      });
+
+      // Auto-load first plot (optional): uncomment if you want a default
+      // load(buttons[0], true);
+
+      restoreFromURL();
+    })();
+  </script>
+</body>
+</html>
